@@ -94,51 +94,90 @@
 #     main()
 
 
-from flask import Flask
+import datetime
+from flask import Flask, json
 from flask import request
 from flask import jsonify
-from controllers.UserController import UserController
-from controllers.UserController import Middleware
+from controllers.Authentication import gen_token, renew_access_token
+from controllers.Authentication import require_login
+from controllers.UserController import Controller
 import jwt
 
 app = Flask(__name__)
 app.config["DEBUG"] = True
 
-app.wsgi_app = Middleware(app.wsgi_app)
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/token', methods=['POST'])
+def token():
+    token = request.form['token']
+    controller = Controller()
+
+    if not token:
+        return {
+            "message": "Missing refresh token"
+        }, 401
+
+    if not controller.get_token(token):
+        return {
+            "message": "The refresh token doesn't exist"
+        }, 401
+
+    try:
+        jwt.decode(token, key="secret1", algorithms=["HS256"])
+
+        access_token = renew_access_token(token)
+
+        return jsonify({"token": access_token})
+    except Exception as e:
+        return jsonify(
+            {
+                "message": "The refresh token is invalid",
+                "data": None,
+                "error": str(e)
+            })
+
+
+@ app.route('/login', methods=['GET', 'POST'])
 def login():
 
-    user_controller = UserController()
+    controller = Controller()
 
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
 
-        if user_controller.check_psw(email, password):
-            key = "secret"
-            encoded = jwt.encode({"email": email}, key, algorithm="HS256")
-            return jsonify({"jwt": encoded})
+        if controller.check_psw(email, password):
+            access_token = gen_token({"email": email}, "secret", 30)
+            refresh_token = gen_token({"email": email}, "secret1", 60)
+
+            controller.add_token(refresh_token)
+
+            return jsonify({"access_token": access_token, "refresh_token": refresh_token})
         else:
-            return jsonify({"mgs": "Log in failed"})
+            return jsonify({"message": "Login failed"})
     else:
-        return jsonify({"msg": "Please log in"})
+        return jsonify({"message": "Please login"})
 
 
-@app.route('/register', methods=['GET', 'POST'])
+@ app.route('/register', methods=['GET', 'POST'])
 def register():
-    user_controller = UserController()
+    controller = Controller()
 
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
 
-        user_controller.add_user(email, password)
+        controller.add_user(email, password)
 
-        return jsonify({"Success": {"email": email, "psw": password}})
-
+        return jsonify({"success": {"email": email, "password": password}})
     else:
-        return jsonify({"msg": "Please register"})
+        return jsonify({"message": "Please register"})
+
+
+@ app.route('/user', methods=['GET'])
+@ require_login
+def user(user):
+    return jsonify({"email": user.email})
 
 
 def main():

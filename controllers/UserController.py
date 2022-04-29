@@ -1,31 +1,9 @@
-from re import split
 from sqlalchemy.engine.create import create_engine
 from sqlalchemy.orm.session import Session
-import bcrypt
 from sqlalchemy.sql.expression import select
-from werkzeug.wrappers import Request, Response
-import jwt
-from models import User
+from models import User, RefreshToken
 
-class Middleware():
-    def __init__(self, app):
-        self.app = app
-
-    def __call__(self, environ, start_response):
-        request = Request(environ)
-
-        auth_header = request.headers['authorization']
-        token = auth_header.split(' ')[1] if auth_header else None
-
-        if token is None or token == "":
-            res = Response(status=401)
-            return res(environ, start_response)
-
-        decoded = jwt.decode(token, key="secret", algorithms=["HS256"])
-
-        print(decoded)
-
-        return self.app(environ, start_response)
+import bcrypt
 
 
 class Engine:
@@ -38,7 +16,7 @@ class Engine:
         return cls.__instance
 
 
-class UserController:
+class Controller:
     def __init__(self):
         self.engine = Engine()
 
@@ -62,3 +40,27 @@ class UserController:
             hashed = user.password
 
             return bcrypt.checkpw(psw, hashed)
+
+    def get_user(self, email):
+        with Session(self.engine) as session:
+            stmt = (select(User).where(User.email == email))
+            user = session.scalars(stmt).one()
+
+            return user
+
+    def add_token(self, token):
+        with Session(self.engine) as session:
+            refresh_token = RefreshToken(token=token)
+
+            session.add(refresh_token)
+            session.commit()
+
+    def get_token(self, token):
+        try:
+            with Session(self.engine) as session:
+                stmt = (select(RefreshToken).where(RefreshToken.token == token))
+                token = session.scalars(stmt).one()
+
+                return token
+        except Exception:
+            return None
