@@ -1,26 +1,16 @@
-from sqlalchemy.engine.create import create_engine
 from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.expression import select
-from models import User, RefreshToken
-
 import bcrypt
 
-
-class Engine:
-    __instance = None
-
-    def __new__(cls, *args):
-        if cls.__instance is None:
-            cls.__instance = create_engine(
-                "sqlite:///data.db", echo=True, future=True)
-        return cls.__instance
+from .models import *
+from Core import Engine
 
 
-class Controller:
+class UserController:
     def __init__(self):
         self.engine = Engine()
 
-    def add_user(self, email, password):
+    def add(self, email, password):
         with Session(self.engine) as session:
             psw = password.encode("utf-8")
             salt = bcrypt.gensalt()
@@ -30,6 +20,13 @@ class Controller:
 
             session.add(user)
             session.commit()
+
+    def get_by_email(self, email):
+        with Session(self.engine) as session:
+            stmt = (select(User).where(User.email == email))
+            user = session.scalars(stmt).one()
+
+            return user
 
     def check_psw(self, email, password):
         with Session(self.engine) as session:
@@ -41,26 +38,25 @@ class Controller:
 
             return bcrypt.checkpw(psw, hashed)
 
-    def get_user(self, email):
+
+class RefreshTokenController:
+    def __init__(self):
+        self.engine = Engine()
+
+    def add(self, refresh_token: str):
         with Session(self.engine) as session:
-            stmt = (select(User).where(User.email == email))
-            user = session.scalars(stmt).one()
+            token = RefreshToken(token=refresh_token)
 
-            return user
-
-    def add_token(self, token):
-        with Session(self.engine) as session:
-            refresh_token = RefreshToken(token=token)
-
-            session.add(refresh_token)
+            session.add(token)
             session.commit()
 
-    def get_token(self, token):
+    def get_by_token(self, refresh_token):
         try:
             with Session(self.engine) as session:
-                stmt = (select(RefreshToken).where(RefreshToken.token == token))
-                token = session.scalars(stmt).one()
+                stmt = (select(RefreshToken).where(
+                        RefreshToken.token == refresh_token))
+                refresh_token = session.scalars(stmt).one()
 
-                return token
+                return refresh_token
         except Exception:
             return None
