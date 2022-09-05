@@ -1,7 +1,7 @@
 import datetime
 import jwt
 
-from Core import app
+from Core import app, Res
 
 SECRET_ACCESS = app.config["ACCESS_TOKEN_SECRET"]
 SECRET_REFRESH = app.config["REFRESH_TOKEN_SECRET"]
@@ -33,20 +33,30 @@ def gen_refresh_token(data: dict):
     return _gen_token(data, SECRET_REFRESH, int(EXP_REFRESH))
 
 
-def decode_access(access_token: str):
-    return jwt.decode(access_token, key=SECRET_ACCESS, algorithms=[ALGO])
+def decode_access(access_token: str) -> Res:
+    try:
+        val = jwt.decode(access_token, key=SECRET_ACCESS, algorithms=[ALGO])
+        return Res(val, None)
+    except Exception as err:
+        return Res(None, err)
 
 
 def decode_refresh(refresh_token: str):
-    return jwt.decode(refresh_token, key=SECRET_REFRESH, algorithms=[ALGO])
-
-
-def renew_access(refresh_token: str):
     try:
-        data = decode_refresh(refresh_token)
+        val = jwt.decode(refresh_token, key=SECRET_REFRESH, algorithms=[ALGO])
+        return Res(val, None)
+    except Exception as err:
+        return Res(None, err)
 
-        access_token = gen_access_token({"email": data["email"]})
 
-        return access_token
-    except Exception as e:
-        return str(e)
+def renew_access(refresh_token: str) -> Res:
+    res = decode_refresh(refresh_token)
+
+    if res.is_not_ok():
+        return res
+
+    email = res.ok["email"]
+
+    access_token = gen_access_token({"email": email})
+
+    return Res(access_token, None)

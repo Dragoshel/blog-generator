@@ -1,102 +1,117 @@
 from functools import wraps
-from flask import request, jsonify, make_response
+from http import HTTPStatus
+from flask import request
 import jwt
 
 from .controllers import *
 from .utils import *
 from .models import *
 
-from Core import app
+from Core import HttpRes, app
 
 
 @app.route("/token", methods=["GET"])
 def token():
+    ERR_HTTP_RES = HttpRes(
+        err="Something went wrong while trying to generate token.",
+        code=HTTPStatus.UNAUTHORIZED
+    ).make_response()
+
     refresh_token = request.form["token"]
     refresh_token_controller = RefreshTokenController()
 
     if not refresh_token:
-        return make_response(jsonify({
-            "message": "Failed.",
-            "data": None,
-            "error": "Refresh token missing."
-        }), 401)
+        print("Refresh Token Missing From Form")
+        return ERR_HTTP_RES
 
-    if not refresh_token_controller.get_by_token(refresh_token):
-        return make_response(jsonify({
-            "message": "Failed.",
-            "data": None,
-            "error": "Refresh token doesn't exist."
-        }), 401)
+    if refresh_token_controller \
+        .get_by_token(refresh_token) \
+            .is_not_ok():
+        return ERR_HTTP_RES
 
-    try:
-        decode_refresh(refresh_token)
+    res = renew_access(refresh_token)
 
-        access_token = renew_access(refresh_token)
+    if res.is_not_ok():
+        return ERR_HTTP_RES
 
-        return make_response(jsonify({
-            "message": "Successfully generated access token.",
-            "data": {
-                "token": access_token
-            }
-        }), 200)
-    except Exception as e:
-        return make_response(jsonify({
-            "message": "Refresh token is invalid.",
-            "data": None,
-            "error": str(e)
-        }), 401)
+    return HttpRes(
+        ok="Successfully generated access token.",
+        data={
+            "token": res.ok
+        }
+    ).make_response()
 
 
 @app.route("/register", methods=["POST"])
 def register():
+    ERR_HTTP_RES = HttpRes(
+        err="Something went wrong while trying to register.",
+        code=HTTPStatus.UNAUTHORIZED
+    ).make_response()
+
     user_controller = UserController()
 
     email = request.form["email"]
     password = request.form["password"]
 
-    user_controller.add(email, password)
+    if user_controller.add(email, password).is_not_ok():
+        return ERR_HTTP_RES
 
-    return make_response(jsonify({
-        "message": "Successfully registered",
-        "data": {
+    return HttpRes(
+        ok="Successfully registered.",
+        data={
             "email": email,
             "password": password
         }
-    }), 200)
+    ).make_response()
 
 
 @app.route("/login", methods=["POST"])
 def login():
+    ERR_HTTP_RES = HttpRes(
+        err="Something went wrong while trying to log in.",
+        code=HTTPStatus.UNAUTHORIZED
+    ).make_response()
+
     refresh_token_controller = RefreshTokenController()
     user_controller = UserController()
 
     email = request.form["email"]
     password = request.form["password"]
 
-    if user_controller.check_psw(email, password):
-        access_token = gen_access_token({"email": email})
-        refresh_token = gen_refresh_token({"email": email})
+    user_res = user_controller.get_by_email(email)
 
-        refresh_token_controller.add(refresh_token)
+    if user_res.is_not_ok():
+        return ERR_HTTP_RES
 
-        return make_response(jsonify({
-            "message": "Successfully logged in",
-            "data": {
-                "access_token": access_token,
-                "refresh_token": refresh_token
-            }
-        }), 200)
-    else:
-        return make_response(jsonify({
-            "message": "Log in failed",
-            "data": None,
-            "error": "Unauthorized"
-        }), 401)
+    pwd_res = user_controller.check_pwd(user_res.ok, password)
+
+    if pwd_res.is_not_ok():
+        return ERR_HTTP_RES
+
+    access_token = gen_access_token({"email": email})
+    refresh_token = gen_refresh_token({"email": email})
+
+    if refresh_token_controller.add(refresh_token).is_not_ok():
+        return ERR_HTTP_RES
+
+    return HttpRes(
+        ok="Successfully logged in.",
+        data={
+            "access_token": access_token,
+            "refresh_token": refresh_token
+        }
+    ).make_response()
 
 
 def require_login(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        ERR_HTTP_RES = HttpRes(
+            err="Something went wrong while trying authorize.",
+            code=HTTPStatus.UNAUTHORIZED
+        ).make_response()
+
         access_token = None
         user = None
 
@@ -106,32 +121,22 @@ def require_login(f):
             access_token = request.headers["Authorization"].split(" ")[1]
 
         if not access_token:
-            return make_response(jsonify({
-                "message": "Authentication token is missing!",
-                "data": None,
-                "error": "Unauthorized"
-            }), 401)
+            print("Authorization token is missing.")
+            return ERR_HTTP_RES
 
-        print("Is this happening?")
+        res_token = decode_access(access_token)
 
-        try:
-            data = decode_access(access_token)
+        if res_token.is_not_ok():
+            return ERR_HTTP_RES
 
-            user = user_controller.get_by_email(data["email"])
+        email = res_token.ok["email"]
 
-            if user is None:
-                return make_response(jsonify({
-                    "message": "User in access token doesn't exist!",
-                    "data": None,
-                    "error": "Unauthorized"
-                }), 401)
+        res_user = user_controller.get_by_email(email)
 
-        except Exception as e:
-            return make_response(jsonify({
-                "message": "Authentication token is invalid",
-                "data": None,
-                "erorr": str(e)
-            }), 401)
+        if res_user.is_not_ok():
+            return ERR_HTTP_RES
+
+        user = res_user.ok
 
         return f(user, *args, **kwargs)
 

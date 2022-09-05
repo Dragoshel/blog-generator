@@ -9,6 +9,7 @@ sqlalchemy = "*"
 bcrypt = "*"
 flask = "*"
 python-dotenv = "*"
+flask-cors = "*"
 
 [dev-packages]
 

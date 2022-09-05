@@ -2,61 +2,81 @@ from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.expression import select
 import bcrypt
 
+import traceback
+
 from .models import *
-from Core import Engine
+from Core import Engine, Res
 
 
 class UserController:
     def __init__(self):
         self.engine = Engine()
 
-    def add(self, email, password):
-        with Session(self.engine) as session:
-            psw = password.encode("utf-8")
-            salt = bcrypt.gensalt()
-            hashed = bcrypt.hashpw(psw, salt)
+    def add(self, email, password) -> Res:
+        try:
+            with Session(self.engine) as session:
+                psw = password.encode("utf-8")
+                salt = bcrypt.gensalt()
+                hashed = bcrypt.hashpw(psw, salt)
 
-            user = User(email=email, password=hashed)
+                user = User(email=email, password=hashed)
 
-            session.add(user)
-            session.commit()
+                session.add(user)
+                session.commit()
+            return Res(True, None)
+        except Exception as err:
+            traceback.print_exc()
+            return Res(None, err)
 
-    def get_by_email(self, email):
-        with Session(self.engine) as session:
-            stmt = (select(User).where(User.email == email))
-            user = session.scalars(stmt).one()
+    def get_by_email(self, email) -> Res:
+        try:
+            with Session(self.engine) as session:
+                stmt = (select(User).where(User.email == email))
+                user = session.scalars(stmt).one()
 
-            return user
+                return Res(user, None)
+        except Exception as err:
+            traceback.print_exc()
+            return Res(None, err)
 
-    def check_psw(self, email, password):
-        with Session(self.engine) as session:
-            stmt = (select(User).where(User.email == email))
-            user = session.scalars(stmt).one()
+    def check_pwd(self, user, pwd) -> Res:
+        try:
+            pwd = pwd.encode("utf-8")
+            hash = user.password
 
-            psw = password.encode("utf-8")
-            hashed = user.password
+            if bcrypt.checkpw(pwd, hash) is not True:
+                raise Exception("Password is not matching.")
 
-            return bcrypt.checkpw(psw, hashed)
+            return Res(True, None)
+        except Exception as err:
+            traceback.print_exc()
+            return Res(None, err)
 
 
 class RefreshTokenController:
     def __init__(self):
         self.engine = Engine()
 
-    def add(self, refresh_token: str):
-        with Session(self.engine) as session:
-            token = RefreshToken(token=refresh_token)
+    def add(self, refresh_token: str) -> Res:
+        try:
+            with Session(self.engine) as session:
+                token = RefreshToken(token=refresh_token)
 
-            session.add(token)
-            session.commit()
+                session.add(token)
+                session.commit()
+            return Res(True, None)
+        except Exception as err:
+            traceback.print_exc()
+            return Res(None, err)
 
-    def get_by_token(self, refresh_token):
+    def get_by_token(self, refresh_token: str) -> Res:
         try:
             with Session(self.engine) as session:
                 stmt = (select(RefreshToken).where(
                         RefreshToken.token == refresh_token))
                 refresh_token = session.scalars(stmt).one()
 
-                return refresh_token
-        except Exception:
-            return None
+                return Res(refresh_token, None)
+        except Exception as err:
+            traceback.print_exc()
+            return Res(None, err)

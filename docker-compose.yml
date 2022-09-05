@@ -1,0 +1,25 @@
+services:
+  client:
+    build:
+      context: client
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    volumes:
+      - ./client:/usr/src/client
+  api:
+    build:
+      context: api
+    volumes:
+      - ./api:/usr/src/api
+    ports:
+      - "5000:5000"
+    environment:
+      FLASK_ACCESS_TOKEN_SECRET: "access"
+      FLASK_REFRESH_TOKEN_SECRET: "refresh"
+      FLASK_ACCESS_TOKEN_EXP: 30
+      FLASK_REFRESH_TOKEN_EXP: 60
+      FLASK_ALGORITHM: "HS256"
+      FLASK_DB_URL: "sqlite:///data.db"
+      FLASK_DEBUG: true
