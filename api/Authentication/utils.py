@@ -18,8 +18,8 @@ def _gen_token(data: dict, secret: str | None, exp: int):
     expiration_time = (datetime_now + expiration_delta).strftime('%s')
 
     payload = data | {
-        "iat": datetime_now.strftime('%s'),
-        "exp": expiration_time
+        "iat": int(datetime_now.strftime('%s')),
+        "exp": int(expiration_time)
     }
 
     return jwt.encode(payload, secret, algorithm=ALGO)

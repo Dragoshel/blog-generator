@@ -1,6 +1,6 @@
 from functools import wraps
 from http import HTTPStatus
-from flask import request
+from flask import request, jsonify
 import jwt
 
 from .controllers import *
@@ -10,7 +10,65 @@ from .models import *
 from Core import HttpRes, app
 
 
-@app.route("/token", methods=["GET"])
+def require_login(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        ERR_HTTP_RES = HttpRes(
+            err="Something went wrong while trying authenticate.",
+            code=HTTPStatus.UNAUTHORIZED
+        ).make_response()
+
+        TOKEN_EXP_HTTP_RES = HttpRes(
+            err="Token has expired.",
+            code=HTTPStatus.UNAUTHORIZED
+        ).make_response()
+
+        access_token = None
+        user = None
+
+        user_controller = UserController()
+
+        if "Authorization" in request.headers:
+            access_token = request.headers["Authorization"].split(" ")[1]
+
+        if not access_token:
+            print("Authorization token is missing.")
+            return ERR_HTTP_RES
+
+        res_token = decode_access(access_token)
+
+        if res_token.is_not_ok():
+            if isinstance(res_token.err, jwt.ExpiredSignatureError):
+                return TOKEN_EXP_HTTP_RES
+            
+            return ERR_HTTP_RES
+
+        email = res_token.ok["email"]
+
+        res_user = user_controller.get_by_email(email)
+
+        if res_user.is_not_ok():
+            return ERR_HTTP_RES
+
+        user = res_user.ok
+
+        return f(user, *args, **kwargs)
+
+    return decorated
+
+
+@app.route("/authenticate", methods=["GET"])
+@require_login
+def authenticate(user):
+    return HttpRes(
+        ok="Authenticated",
+        data={
+            "email": user.email
+        }
+    ).make_response()
+
+
+@app.route("/token", methods=["POST"])
 def token():
     ERR_HTTP_RES = HttpRes(
         err="Something went wrong while trying to generate token.",
@@ -102,42 +160,3 @@ def login():
             "refresh_token": refresh_token
         }
     ).make_response()
-
-
-def require_login(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        ERR_HTTP_RES = HttpRes(
-            err="Something went wrong while trying authorize.",
-            code=HTTPStatus.UNAUTHORIZED
-        ).make_response()
-
-        access_token = None
-        user = None
-
-        user_controller = UserController()
-
-        if "Authorization" in request.headers:
-            access_token = request.headers["Authorization"].split(" ")[1]
-
-        if not access_token:
-            print("Authorization token is missing.")
-            return ERR_HTTP_RES
-
-        res_token = decode_access(access_token)
-
-        if res_token.is_not_ok():
-            return ERR_HTTP_RES
-
-        email = res_token.ok["email"]
-
-        res_user = user_controller.get_by_email(email)
-
-        if res_user.is_not_ok():
-            return ERR_HTTP_RES
-
-        user = res_user.ok
-
-        return f(user, *args, **kwargs)
-
-    return decorated

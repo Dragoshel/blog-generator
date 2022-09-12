@@ -11,4 +11,4 @@ COPY . .
 
 EXPOSE 3000
 
-CMD ["sh", "entrypoint.sh"]
+CMD ["npm", "start"]

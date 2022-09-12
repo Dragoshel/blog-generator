@@ -1,6 +1,8 @@
 from sqlalchemy.orm.session import Session
 from sqlalchemy.sql.expression import select
 
+from Authentication.models import User
+
 from . import Engine
 from .models import *
 
@@ -22,3 +24,10 @@ class ArticleController:
 
             session.add(article)
             session.commit()
+
+    def get_all_by_user(self, user):
+        with Session(self.engine) as session:
+            stmt = (select(Article).where(User.email == user.email))
+            article = session.scalars(stmt).all()
+
+            return article

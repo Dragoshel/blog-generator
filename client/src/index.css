@@ -1,3 +1,17 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  @font-face {
+    font-family: "3270 Medium";
+    src: url("../public/fonts/Medium/3270-Medium\ Nerd\ Font\ Complete\ Mono.ttf") format("truetype");
+    src: url("../public/fonts/Medium/3270-Medium\ Nerd\ Font\ Complete\ Mono.otf") format("opentype");
+  }
+
+  @font-face {
+    font-family: "3270 Semi-Narrow";
+    src: url("../public/fonts/Semi-Narrow/3270\ Semi-Narrow\ Nerd\ Font\ Complete\ Mono.ttf") format("truetype");
+    src: url("../public/fonts/Semi-Narrow/3270\ Semi-Narrow\ Nerd\ Font\ Complete\ Mono.otf") format("opentype");
+  }
+}
