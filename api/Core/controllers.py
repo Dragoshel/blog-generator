@@ -25,9 +25,18 @@ class ArticleController:
             session.add(article)
             session.commit()
 
+            return article.id
+
     def get_all_by_user(self, user):
         with Session(self.engine) as session:
             stmt = (select(Article).where(User.email == user.email))
-            article = session.scalars(stmt).all()
+            articles = session.scalars(stmt).all()
 
-            return article
+            return articles
+
+    def get_filtered(self, filter):
+        with Session(self.engine) as session:
+            stmt = select(Article).limit(filter)
+            articles = session.scalars(stmt).all()
+
+            return articles

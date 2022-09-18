@@ -10,7 +10,7 @@ def get_all_articles(user):
     article_controller = ArticleController()
 
     try:
-        articles_obj = article_controller.get_all_by_user(user)
+        articles = article_controller.get_all_by_user(user)
 
         def _map_articles(articles):
             result = map(lambda a: {
@@ -20,7 +20,9 @@ def get_all_articles(user):
 
             return list(result)
 
-        return HttpRes(data=_map_articles(articles_obj)).make_response()
+        return HttpRes(
+            data=_map_articles(articles)
+        ).make_response()
     except Exception as e:
         return HttpRes(
             err=str(e),
@@ -37,17 +39,17 @@ def create_article(user):
         title = request.form["title"]
         body = request.form["body"]
 
-        article_controller.create(title, body)
+        article_id = article_controller.create(title, body)
 
-        return make_response(jsonify({
-            "message": "Successfuly created",
-        }), 200)
+        return HttpRes(
+            ok="Successfuly created",
+            data={"id": article_id}
+        ).make_response()
     except Exception as e:
-        return make_response(jsonify({
-            "message": "Could not find resource",
-            "data": None,
-            "error": str(e)
-        }), 405)
+        return HttpRes(
+            err="Something went wrong while trying to create article",
+            code=HTTPStatus.INTERNAL_SERVER_ERROR
+        )
 
 
 @app.route("/builder/edit/<int:article_id>", methods=["GET"])

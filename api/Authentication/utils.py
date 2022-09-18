@@ -49,14 +49,7 @@ def decode_refresh(refresh_token: str):
         return Res(None, err)
 
 
-def renew_access(refresh_token: str) -> Res:
-    res = decode_refresh(refresh_token)
-
-    if res.is_not_ok():
-        return res
-
-    email = res.ok["email"]
-
+def renew_access(email: str) -> Res:
     access_token = gen_access_token({"email": email})
 
     return Res(access_token, None)

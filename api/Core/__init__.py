@@ -51,3 +51,4 @@ class HttpRes:
 
 import Authentication.handlers
 import Builder.handlers
+from . import handlers

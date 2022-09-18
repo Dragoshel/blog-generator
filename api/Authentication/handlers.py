@@ -1,6 +1,6 @@
 from functools import wraps
 from http import HTTPStatus
-from flask import request, jsonify
+from flask import request, jsonify, make_response
 import jwt
 
 from .controllers import *
@@ -13,42 +13,41 @@ from Core import HttpRes, app
 def require_login(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        ERR_HTTP_RES = HttpRes(
-            err="Something went wrong while trying authenticate.",
+        MISSING_TOKEN_RES = HttpRes(
             code=HTTPStatus.UNAUTHORIZED
         ).make_response()
+        MISSING_TOKEN_RES.headers["WWW-Authenticate"] = "Bearer realm=\"Access to the builder website is protected.\""
 
-        TOKEN_EXP_HTTP_RES = HttpRes(
-            err="Token has expired.",
+        EXPIRED_TOKEN_RES = HttpRes(
             code=HTTPStatus.UNAUTHORIZED
         ).make_response()
+        EXPIRED_TOKEN_RES.headers["WWW-Authenticate"] = "Bearer realm=\"Access to the builder website is protected.\",error=\"expired_token\",error_description=\"The token provided expired.\""
 
         access_token = None
         user = None
-
-        user_controller = UserController()
 
         if "Authorization" in request.headers:
             access_token = request.headers["Authorization"].split(" ")[1]
 
         if not access_token:
-            print("Authorization token is missing.")
-            return ERR_HTTP_RES
+            return MISSING_TOKEN_RES
+
+        user_controller = UserController()
 
         res_token = decode_access(access_token)
 
         if res_token.is_not_ok():
             if isinstance(res_token.err, jwt.ExpiredSignatureError):
-                return TOKEN_EXP_HTTP_RES
-            
-            return ERR_HTTP_RES
+                return EXPIRED_TOKEN_RES
+
+            return MISSING_TOKEN_RES
 
         email = res_token.ok["email"]
 
         res_user = user_controller.get_by_email(email)
 
         if res_user.is_not_ok():
-            return ERR_HTTP_RES
+            return MISSING_TOKEN_RES
 
         user = res_user.ok
 
@@ -70,27 +69,44 @@ def authenticate(user):
 
 @app.route("/token", methods=["POST"])
 def token():
-    ERR_HTTP_RES = HttpRes(
-        err="Something went wrong while trying to generate token.",
+    MISSING_TOKEN_RES = HttpRes(
         code=HTTPStatus.UNAUTHORIZED
     ).make_response()
+    MISSING_TOKEN_RES.headers["WWW-Authenticate"] = "Bearer realm=\"Access to the builder website is protected.\""
 
-    refresh_token = request.form["token"]
-    refresh_token_controller = RefreshTokenController()
+    EXPIRED_TOKEN_RES = HttpRes(
+        code=HTTPStatus.UNAUTHORIZED
+    ).make_response()
+    EXPIRED_TOKEN_RES.headers["WWW-Authenticate"] = "Bearer realm=\"Access to the builder website is protected.\",error=\"expired_token\",error_description=\"The token provided expired.\""
+
+    refresh_token = None
+
+    if "Authorization" in request.headers:
+        refresh_token = request.headers["Authorization"].split(" ")[1]
 
     if not refresh_token:
-        print("Refresh Token Missing From Form")
-        return ERR_HTTP_RES
+        return MISSING_TOKEN_RES
+
+    refresh_token_controller = RefreshTokenController()
+
+    res_token = decode_refresh(refresh_token)
+
+    if res_token.is_not_ok():
+        if isinstance(res_token.err, jwt.ExpiredSignatureError):
+            return EXPIRED_TOKEN_RES
+        return MISSING_TOKEN_RES
 
     if refresh_token_controller \
         .get_by_token(refresh_token) \
             .is_not_ok():
-        return ERR_HTTP_RES
+        return MISSING_TOKEN_RES
 
-    res = renew_access(refresh_token)
+    email = res_token.ok["email"]
+
+    res = renew_access(email)
 
     if res.is_not_ok():
-        return ERR_HTTP_RES
+        return MISSING_TOKEN_RES
 
     return HttpRes(
         ok="Successfully generated access token.",
