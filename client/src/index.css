@@ -13,6 +13,5 @@
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;
-  background-image: linear-gradient(#1118279e 100%, #1118279e), url("nature.webp");
   background-attachment: fixed;
 }
