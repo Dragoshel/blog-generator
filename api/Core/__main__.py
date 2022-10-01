@@ -4,7 +4,6 @@ from . import Engine
 from Authentication.models import AuthenticationModel
 from .models import CoreModel
 
-
 def make_db():
     engine = Engine()
     engine.connect()

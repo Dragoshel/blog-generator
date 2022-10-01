@@ -2,7 +2,6 @@ from .controllers import ArticleController
 from . import HttpRes, app
 
 
-from flask import make_response, jsonify
 from http import HTTPStatus
 
 
@@ -18,13 +17,15 @@ def get(id: int):
                   "body": article.body}
         ).make_response()
     except Exception as e:
+        print(e)
+
         return HttpRes(
             code=HTTPStatus.NOT_FOUND
         ).make_response()
 
 
 @app.route("/blog/articles/<int:filter>", methods=["GET"])
-def get_all(filter: int):
+def get_all_filtered(filter: int):
     article_controller = ArticleController()
 
     try:
@@ -34,7 +35,6 @@ def get_all(filter: int):
             result = map(lambda a: {
                 "id": a.id,
                 "title": a.title,
-                "body": a.body
             }, articles)
 
             return list(result)
@@ -43,6 +43,8 @@ def get_all(filter: int):
             data=_map_articles(articles)
         ).make_response()
     except Exception as e:
+        print(e)
+
         return HttpRes(
             code=HTTPStatus.INTERNAL_SERVER_ERROR
         ).make_response()

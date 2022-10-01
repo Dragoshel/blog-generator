@@ -32,9 +32,6 @@ const Article = () => {
 			const title = result.title;
 			const body = result.body;
 
-			console.log(title);
-			console.log(body);
-
 			setBody(body);
 			setTitle(title);
 		};
@@ -43,12 +40,12 @@ const Article = () => {
 	}, [])
 
 	return (
-		<section className="min-h-screen bg-image text-slate-50">
-			<div className="max-w-7xl mx-auto p-5">
-				<ReactMarkdown className="w-full bg-gray-900/80 ring-2 ring-red-900 shadow-boxy p-5">
+		<section className="p-5">
+			<form className="bg-gray-900/80 hover:bg-gray-900 transition duration-75 ring-2 ring-red-900 shadow-boxy text-gray-900 p-5">
+				<ReactMarkdown className="text-slate-50">
 					{body}
 				</ReactMarkdown>
-			</div>
+			</form>
 		</section>
 
 	);

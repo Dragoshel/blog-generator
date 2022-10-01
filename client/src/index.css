@@ -5,13 +5,15 @@
 @layer base {
   @font-face {
     font-family: "3270 Medium";
-    src: url("../public/fonts/Medium/3270-Medium\ Nerd\ Font\ Complete.otf") format("opentype");
+    src: url("./assets/fonts/Medium/3270-Medium\ Nerd\ Font\ Complete.otf") format("opentype");
   }
 }
 
-.bg-image {
+body {
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;
   background-attachment: fixed;
+  background-color: #111827;
 }
+

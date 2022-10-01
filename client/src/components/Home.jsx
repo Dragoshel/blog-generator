@@ -1,72 +1,87 @@
-// import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import ponton1 from "../ponton1.png";
+
+import { getAllArticlesFiltered } from "../api/core";
 
 const Home = () => {
-	// const [articles, setArticles] = useState([]);
+	const [articles, setArticles] = useState([]);
+	const [loaded, setLoaded] = useState(false);
 
-	// const getAllArticles = async () => {
-	// 	const URL = "http://localhost:5000/blog/articles";
+	useEffect(() => {
+		const articles = async () => {
+			try {
+				const result = await getAllArticlesFiltered(10);
 
-	// 	const options = {
-	// 		method: "GET"
-	// 	};
+				setArticles(result);
+			} catch {
 
-	// 	const response = await fetch(URL, options);
-	// 	const data = await response.json();
+			} finally {
+				setLoaded(true);
+			}
+		}
 
-	// 	if (response.status === 200) {
-	// 		return data.data;
-	// 	}
+		articles();
+	}, [])
 
-	// 	return undefined;
-	// };
+	const aritcleList = () => {
+		if (articles?.length < 1) {
+			return (<p className="font-bold text-amber-500">No articles at the moment</p>);
+		}
 
-	// useEffect(() => {
-	// 	const setAllArticles = async () => {
-	// 		const result = await getAllArticles();
-
-	// 		setArticles(result);
-	// 	};
-
-	// 	setAllArticles();
-	// }, [])
+		return (
+			<ul>
+				{articles.map((a) => (
+					<li key={a.id}>
+						<Link to={`/blog/article/${a.id}`}>
+							<span className="underline hover:text-sky-500">
+								{a.title}
+							</span>
+						</Link>
+					</li>
+				))}
+			</ul>
+		);
+	};
 
 	return (
-		<section className="min-h-screen bg-image text-slate-50"
-			style={{ backgroundImage: `linear-gradient(#1118279e 100%, #1118279e), url(${ponton1})` }}> 
-			<div className="min-h-screen max-w-7xl md:flex gap-10 mx-auto p-5">
-				<div className="self-start max-w-[16rem] md:w-64 shrink-0
-								bg-gray-900/80 ring-2 ring-red-900 shadow-boxy">
-					<ul className="p-5">
-						<li><Link to="/">Home</Link></li>
-						<li><Link to="/register">Register</Link></li>
-						<li><Link to="/login">Article Builder</Link></li>
-					</ul>
-				</div>
-				<div className="self-start w-full
-								bg-gray-900/80 ring-2 ring-red-900 shadow-boxy mt-5 md:mt-0 p-5">
-					<p className="font-extrabold">These are the first lines of text of my first ever website.</p>
-					<p>Here you will find very cool and interesting stuff about technology, philosopy and random thoughts.</p>
-					<br />
-					<p>Available articles:</p>
-					<p className="text-[#fe9e41]">No articles at the moment</p>
-					{/*					{
-						articles !== undefined || articles.length > 0 ? 
-							(
-								<ul>
-									{articles.map((article) => (
-										<li key={article.id} className="hover:text-sky-500">
-											<Link to={`/blog/article/${article.id}`}>
-												{article.title}
-											</Link>
-										</li>
-									))}
-								</ul>
-							) : (<p>No articles at the moment.</p>)
-					}
-*/}
-				</div>
+		<section className="md:flex gap-10 p-5"> 
+			<div className="self-start max-w-[16rem] md:w-64 shrink-0
+								bg-gray-900/80 hover:bg-gray-900 transition duration-75 ring-2 ring-red-900 shadow-boxy">
+				<ul className="p-5">
+					<li>
+						<Link to="/">
+							<span className="underline hover:text-sky-500">
+								Home
+							</span>
+						</Link>
+					</li>
+					<li>
+						<Link to="/register">
+							<span className="underline hover:text-sky-500">
+								Register
+							</span>						
+						</Link>
+					</li>
+					<li>
+						<Link to="/builder">
+							<span className="underline hover:text-sky-500">
+								Create an article
+							</span>
+						</Link>
+					</li>
+				</ul>
+			</div>
+			<div className="self-start w-full
+								bg-gray-900/80 hover:bg-gray-900 transition duration-75 ring-2 ring-red-900 shadow-boxy mt-5 md:mt-0 p-5">
+				<p className="font-extrabold">These are the first lines of text of my first ever website.</p>
+				<p>Here you will find very cool and interesting stuff about technology, philosopy and random thoughts.</p>
+				<br />
+				<p>Available articles:</p>
+				{
+					loaded
+						? aritcleList()
+						: <p className="font-bold text-amber-500">Loading...</p>
+				}
 			</div>
 		</section>
 	);

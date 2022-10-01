@@ -12,8 +12,27 @@ class UserController:
     def __init__(self):
         self.engine = Engine()
 
-    def add(self, email, password) -> Res:
+    def get_by_email(self, email) -> Res:
         try:
+            with Session(self.engine) as session:
+                stmt = (select(User).where(User.email == email))
+                user = session.scalars(stmt).one_or_none()
+
+                return Res(user, None)
+        except Exception as err:
+            traceback.print_exc()
+            return Res(None, err)
+
+    def create(self, email, password) -> Res:
+        try:
+            res_db_user = self.get_by_email(email)
+
+            if res_db_user.is_err():
+                return res_db_user
+
+            if res_db_user.is_ok():
+                return Res(None, Exception("Email taken"))
+
             with Session(self.engine) as session:
                 psw = password.encode("utf-8")
                 salt = bcrypt.gensalt()
@@ -24,17 +43,6 @@ class UserController:
                 session.add(user)
                 session.commit()
             return Res(True, None)
-        except Exception as err:
-            traceback.print_exc()
-            return Res(None, err)
-
-    def get_by_email(self, email) -> Res:
-        try:
-            with Session(self.engine) as session:
-                stmt = (select(User).where(User.email == email))
-                user = session.scalars(stmt).one()
-
-                return Res(user, None)
         except Exception as err:
             traceback.print_exc()
             return Res(None, err)

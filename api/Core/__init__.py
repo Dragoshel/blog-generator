@@ -1,7 +1,6 @@
 from sqlalchemy.engine.create import create_engine
 from http import HTTPStatus
 from flask import Flask, jsonify, make_response
-from flask_cors import CORS
 from dotenv import load_dotenv
 
 # Starting point of flask app
@@ -31,8 +30,8 @@ class Res:
     def is_ok(self) -> bool:
         return self.ok != None
 
-    def is_not_ok(self) -> bool:
-        return self.ok == None
+    def is_err(self) -> bool:
+        return self.err != None
 
 
 class HttpRes:

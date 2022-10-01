@@ -10,7 +10,7 @@ module.exports = {
         'mono': ['"3270 Medium"', ...defaultTheme.fontFamily.mono]
       },
       boxShadow: {
-        'boxy': '3px 3px 0px 0px #B91C1C, 5px 5px 0px 0px #DC2626, 7px 7px 0px 0px #EF4444'
+        'boxy': '4px 4px 0px 0px #B91C1C, 6px 6px 0px 0px #DC2626, 8px 8px 0px 0px #EF4444'
       }
     },
   },

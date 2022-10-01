@@ -1,5 +1,5 @@
 from sqlalchemy.orm.session import Session
-from sqlalchemy.sql.expression import select
+from sqlalchemy.sql import select
 
 from Authentication.models import User
 
